@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -17,6 +17,14 @@ function ConfirmationContent() {
     }
   }, [orderNumber]);
 
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
   if (!order) {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -27,14 +35,6 @@ function ConfirmationContent() {
       </div>
     );
   }
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(price);
-  };
 
   return (
     <div>
@@ -51,8 +51,8 @@ function ConfirmationContent() {
           <p><strong>Status:</strong> <span style={{ color: '#f59e0b' }}>{order.status}</span></p>
           
           <h3 style={{ marginTop: '20px' }}>Items</h3>
-          {order.items.map(item => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+          {order.items.map((item, idx) => (
+            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
               <span>{item.name} × {item.quantity}</span>
               <span>{formatPrice(item.price * item.quantity)}</span>
             </div>
