@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function ConfirmationPage() {
+function ConfirmationContent() {
   const searchParams = useSearchParams();
   const orderNumber = searchParams.get('order');
   const [order, setOrder] = useState(null);
@@ -45,7 +45,6 @@ export default function ConfirmationPage() {
       </div>
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-        {/* Order Details */}
         <div className="card">
           <h2>Order Details</h2>
           <p><strong>Date:</strong> {new Date(order.date).toLocaleDateString()}</p>
@@ -67,7 +66,6 @@ export default function ConfirmationPage() {
           </div>
         </div>
         
-        {/* Shipping Information */}
         <div className="card">
           <h2>Shipping Information</h2>
           <p><strong>{order.customer.fullName}</strong></p>
@@ -85,5 +83,13 @@ export default function ConfirmationPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="card">Loading order confirmation...</div>}>
+      <ConfirmationContent />
+    </Suspense>
   );
 }
