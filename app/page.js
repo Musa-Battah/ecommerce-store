@@ -1,66 +1,59 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+import { query } from '@/lib/db';
+import Link from 'next/link';
+import ProductCard from '@/components/ProductCard';
 
-export default function Home() {
+async function getFeaturedProducts() {
+  const result = await query(`
+    SELECT p.*, c.name as category_name
+    FROM products p
+    LEFT JOIN categories c ON p.category_id = c.id
+    WHERE p.is_active = true
+    ORDER BY p.created_at DESC
+    LIMIT 6
+  `);
+  return result.rows;
+}
+
+async function getCategories() {
+  const result = await query(`
+    SELECT * FROM categories ORDER BY name
+  `);
+  return result.rows;
+}
+
+export default async function HomePage() {
+  const featuredProducts = await getFeaturedProducts();
+  const categories = await getCategories();
+  
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.js file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div>
+      {/* Hero Section */}
+      <div className="card" style={{ textAlign: 'center', padding: '60px 20px' }}>
+        <h1 style={{ fontSize: '48px', marginBottom: '20px' }}>Welcome to E-Store</h1>
+        <p style={{ fontSize: '18px', color: '#cccccc', marginBottom: '30px' }}>
+          Discover amazing products at great prices
+        </p>
+        <Link href="/products" className="btn-primary">
+          Shop Now
+        </Link>
+      </div>
+      
+      {/* Categories */}
+      <h2>Shop by Category</h2>
+      <div className="product-grid">
+        {categories.map(category => (
+          <Link key={category.id} href={`/products?category=${category.slug}`} style={{ textDecoration: 'none' }}>
+            <div className="product-card" style={{ textAlign: 'center' }}>
+              <h3>{category.name}</h3>
+              <p style={{ color: '#888888', marginTop: '10px' }}>{category.product_count || 0} products</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+      
+      {/* Featured Products */}
+      <h2 style={{ marginTop: '40px' }}>Featured Products</h2>
+      <ProductCard products={featuredProducts} />
     </div>
   );
-}
+};

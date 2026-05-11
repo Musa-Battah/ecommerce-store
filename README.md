@@ -1,36 +1,76 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛍️ E-commerce Store
 
-## Getting Started
+A complete, full-stack e-commerce platform built with Next.js 16, PostgreSQL, and pure CSS. Features product catalog, shopping cart, checkout process, and admin panel for product management.
 
-First, run the development server:
+## 🚀 Live Demo
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+[View Live Demo](https://ecommerce-store.vercel.app)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Features
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Customer Features
+- **Product Catalog** - Browse products with category filtering and search
+- **Product Details** - View product images, descriptions, pricing, and stock status
+- **Shopping Cart** - Add/remove items, update quantities, persistent storage
+- **Checkout Process** - Shipping information, order summary, order confirmation
+- **Responsive Design** - Fully mobile-responsive with hamburger menu
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Admin Features
+- **Product Management** - Add, edit, and delete products
+- **Stock Management** - Track inventory levels with low stock alerts
+- **Category Management** - Organize products by categories
+- **Order Management** - View and process customer orders
 
-## Learn More
+## 🛠️ Technology Stack
 
-To learn more about Next.js, take a look at the following resources:
+| Category | Technology |
+|----------|------------|
+| **Frontend** | Next.js 16 (App Router) |
+| **Backend** | Next.js API Routes |
+| **Database** | PostgreSQL (Neon) |
+| **Styling** | Pure CSS (Black & White Theme) |
+| **Authentication** | Ready for NextAuth integration |
+| **Deployment** | Vercel |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📊 Database Schema
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sql
+-- Categories
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT
+);
 
-## Deploy on Vercel
+-- Products
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    compare_price DECIMAL(10,2),
+    stock_quantity INTEGER DEFAULT 0,
+    category_id INTEGER REFERENCES categories(id),
+    images TEXT[],
+    is_active BOOLEAN DEFAULT true
+);
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Clone the repository
+git clone https://github.com/Musa-Battah/ecommerce-store.git
+cd ecommerce-store
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Install dependencies
+npm install
+
+# Create environment file
+cp .env.example .env.local
+
+Create .env.local with your database credentials:
+PGHOST=your_neon_host
+PGPORT=5432
+PGDATABASE=neondb
+PGUSER=your_user
+PGPASSWORD=your_password
+PGSSLMODE=require
