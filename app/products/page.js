@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import ProductCard from '@/components/ProductCard';
 
-export default function ProductsPage() {
+function ProductsContent() {
   const searchParams = useSearchParams();
   const categorySlug = searchParams.get('category');
   const searchQuery = searchParams.get('search');
@@ -45,7 +46,7 @@ export default function ProductsPage() {
 
   const handleCategoryClick = (slug) => {
     setSelectedCategory(slug === selectedCategory ? '' : slug);
-    setSearchTerm(''); // Clear search when filtering by category
+    setSearchTerm('');
   };
 
   const handleSearch = (e) => {
@@ -58,18 +59,16 @@ export default function ProductsPage() {
     setSearchTerm('');
   };
 
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0
+    }).format(price);
+  };
+
   return (
     <div>
-
-    // Add this hero section at the top of your homepage
-        <div className="hero-section">
-        <div className="hero-content">
-            <h1 className="hero-title">Welcome to E-Store</h1>
-            <p className="hero-subtitle">Discover amazing products at great prices</p>
-            <Link href="/products" className="btn-primary hero-btn">Shop Now</Link>
-        </div>
-        </div>
-
       <h1>All Products</h1>
       
       {/* Search Bar */}
@@ -115,5 +114,13 @@ export default function ProductsPage() {
         <ProductCard products={products} />
       )}
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="card">Loading products...</div>}>
+      <ProductsContent />
+    </Suspense>
   );
 }
