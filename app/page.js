@@ -39,7 +39,7 @@ export default async function HomePage() {
       </div>
       
       {/* Categories */}
-      <h2>Shop by Category</h2>
+      {/* <h2>Shop by Category</h2>
       <div className="product-grid">
         {categories.map(category => (
           <Link key={category.id} href={`/products?category=${category.slug}`} style={{ textDecoration: 'none' }}>
@@ -49,7 +49,7 @@ export default async function HomePage() {
             </div>
           </Link>
         ))}
-      </div>
+      </div> */}
       
       {/* Featured Products */}
       <h2 style={{ marginTop: '40px' }}>Featured Products</h2>

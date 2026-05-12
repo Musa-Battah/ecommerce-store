@@ -7,16 +7,29 @@ import { useRouter } from 'next/navigation';
 export default function CartPage() {
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
-    loadCart();
-    window.addEventListener('cartUpdated', loadCart);
-    return () => window.removeEventListener('cartUpdated', loadCart);
+    fetchUser();
   }, []);
 
+  const fetchUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+    loadCart();
+  };
+
   const loadCart = () => {
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const cartKey = user ? `cart_${user.id}` : 'cart_guest';
+    const savedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
     setCart(savedCart);
     setLoading(false);
   };
@@ -27,26 +40,29 @@ export default function CartPage() {
       return;
     }
     
+    const cartKey = user ? `cart_${user.id}` : 'cart_guest';
     const updatedCart = cart.map(item =>
       item.id === productId ? { ...item, quantity: newQuantity } : item
     );
     
     setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    localStorage.setItem(cartKey, JSON.stringify(updatedCart));
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const removeItem = (productId) => {
+    const cartKey = user ? `cart_${user.id}` : 'cart_guest';
     const updatedCart = cart.filter(item => item.id !== productId);
     setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    localStorage.setItem(cartKey, JSON.stringify(updatedCart));
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const clearCart = () => {
     if (confirm('Clear your entire cart?')) {
+      const cartKey = user ? `cart_${user.id}` : 'cart_guest';
       setCart([]);
-      localStorage.setItem('cart', '[]');
+      localStorage.setItem(cartKey, '[]');
       window.dispatchEvent(new Event('cartUpdated'));
     }
   };
@@ -61,7 +77,7 @@ export default function CartPage() {
 
   const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 50000 ? 0 : 5000;
-  const tax = subtotal * 0.075; // 7.5% VAT
+  const tax = subtotal * 0.075;
   const total = subtotal + shipping + tax;
 
   if (loading) {
@@ -86,9 +102,16 @@ export default function CartPage() {
     <div>
       <h1>Shopping Cart</h1>
       
+      {user && (
+        <div className="card" style={{ marginBottom: '20px', backgroundColor: '#0a2a0a' }}>
+          <p>✓ Your cart is saved to your account. <Link href="/account/orders" style={{ color: '#4CAF50' }}>View order history →</Link></p>
+        </div>
+      )}
+      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '30px' }}>
         {/* Cart Items */}
         <div className="card">
+          {/* Cart table content (same as before) */}
           <div className="table-container">
             <table style={{ width: '100%' }}>
               <thead>
@@ -111,32 +134,14 @@ export default function CartPage() {
                     <td>{formatPrice(item.price)}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="btn-small"
-                          style={{ padding: '4px 8px', fontSize: '12px' }}
-                        >
-                          -
-                        </button>
-                        <span style={{ minWidth: '30px', textAlign: 'center' }}>{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="btn-small"
-                          style={{ padding: '4px 8px', fontSize: '12px' }}
-                        >
-                          +
-                        </button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="btn-small" style={{ padding: '4px 8px' }}>-</button>
+                        <span>{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="btn-small" style={{ padding: '4px 8px' }}>+</button>
                       </div>
                     </td>
                     <td>{formatPrice(item.price * item.quantity)}</td>
                     <td>
-                      <button
-                        onClick={() => removeItem(item.id)}
-                        className="btn-small"
-                        style={{ backgroundColor: '#ff4444', color: '#ffffff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
-                      >
-                        Remove
-                      </button>
+                      <button onClick={() => removeItem(item.id)} className="btn-small" style={{ backgroundColor: '#ff4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
                     </td>
                   </tr>
                 ))}
@@ -144,30 +149,25 @@ export default function CartPage() {
             </table>
           </div>
           
-          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <button onClick={clearCart} className="btn-secondary">
-              Clear Cart
-            </button>
-            <Link href="/products" className="btn-secondary">
-              Continue Shopping
-            </Link>
+          <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between' }}>
+            <button onClick={clearCart} className="btn-secondary">Clear Cart</button>
+            <Link href="/products" className="btn-secondary">Continue Shopping</Link>
           </div>
         </div>
         
         {/* Order Summary */}
         <div className="card">
           <h2>Order Summary</h2>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Shipping</span>
               <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Tax (7.5% VAT)</span>
               <span>{formatPrice(tax)}</span>
             </div>
@@ -177,7 +177,7 @@ export default function CartPage() {
             </div>
           </div>
           
-          <Link href="/checkout" className="btn-primary" style={{ textAlign: 'center', display: 'block', width: '100%' }}>
+          <Link href="/checkout" className="btn-primary" style={{ textAlign: 'center', display: 'block' }}>
             Proceed to Checkout
           </Link>
         </div>

@@ -5,24 +5,43 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
+  const [user, setUser] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartCount, setCartCount] = useState(0);
   const router = useRouter();
 
-  // Load cart count from localStorage
   useEffect(() => {
-    const updateCartCount = () => {
-      const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-      const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-      setCartCount(totalItems);
-    };
-    
+    fetchUser();
     updateCartCount();
     window.addEventListener('cartUpdated', updateCartCount);
-    
     return () => window.removeEventListener('cartUpdated', updateCartCount);
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+
+  const updateCartCount = () => {
+    const cartKey = user ? `cart_${user.id}` : 'cart_guest';
+    const cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+    const total = cart.reduce((sum, item) => sum + item.quantity, 0);
+    setCartCount(total);
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setUser(null);
+    router.push('/');
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -46,43 +65,20 @@ export default function Navbar() {
         
         <div className={`nav-links ${isMenuOpen ? 'active' : ''}`}>
           <Link href="/" className="nav-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
-          <Link href="/admin/products" className="nav-link" onClick={() => setIsMenuOpen(false)}>Admin</Link>
           <Link href="/products" className="nav-link" onClick={() => setIsMenuOpen(false)}>Products</Link>
-          <Link href="/cart" className="nav-link" onClick={() => setIsMenuOpen(false)}>
-            Cart ({cartCount})
-          </Link>
+          <Link href="/cart" className="nav-link" onClick={() => setIsMenuOpen(false)}>Cart ({cartCount})</Link>
           
-          {/* Mobile Search */}
-          <div className="mobile-search">
-            <form onSubmit={handleSearch} className="navbar-search">
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="navbar-search-input"
-              />
-              <button type="submit" className="navbar-search-btn">
-                Search
-              </button>
-            </form>
-          </div>
-        </div>
-        
-        {/* Desktop Search */}
-        <div className="desktop-search">
-          <form onSubmit={handleSearch} className="navbar-search">
-            <input
-              type="text"
-              placeholder="Search products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="navbar-search-input"
-            />
-            <button type="submit" className="navbar-search-btn">
-              Search
-            </button>
-          </form>
+          {user ? (
+            <>
+              <Link href="/account" className="nav-link" onClick={() => setIsMenuOpen(false)}>Account</Link>
+              <button onClick={handleLogout} className="nav-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Logout</button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" className="nav-link" onClick={() => setIsMenuOpen(false)}>Login</Link>
+              <Link href="/register" className="nav-link" onClick={() => setIsMenuOpen(false)}>Register</Link>
+            </>
+          )}
         </div>
       </div>
     </nav>

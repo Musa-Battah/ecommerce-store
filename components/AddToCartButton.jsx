@@ -1,16 +1,33 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function AddToCartButton({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Error fetching user:', err);
+    }
+  };
 
   const handleAddToCart = () => {
-    // Get existing cart from localStorage
-    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    // Get existing cart from localStorage (for guest) or user-specific
+    const cartKey = user ? `cart_${user.id}` : 'cart_guest';
+    const cart = JSON.parse(localStorage.getItem(cartKey) || '[]');
     
-    // Check if product already in cart
     const existingIndex = cart.findIndex(item => item.id === product.id);
     
     if (existingIndex >= 0) {
@@ -21,15 +38,16 @@ export default function AddToCartButton({ product }) {
         name: product.name,
         price: product.price,
         slug: product.slug,
-        quantity: quantity
+        quantity: quantity,
+        image: product.images?.[0]
       });
     }
     
-    localStorage.setItem('cart', JSON.stringify(cart));
+    localStorage.setItem(cartKey, JSON.stringify(cart));
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
     
-    // Dispatch custom event to update cart count
+    // Dispatch event for cart count update
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
