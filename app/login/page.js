@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
-export default function LoginPage() {
+// Inner component that uses useSearchParams
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
@@ -43,7 +44,6 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
-        // Redirect to previous page or home
         const from = searchParams.get('from') || '/';
         router.push(from);
       } else {
@@ -95,5 +95,14 @@ export default function LoginPage() {
         Don't have an account? <Link href="/register" style={{ color: '#ffffff' }}>Register</Link>
       </p>
     </div>
+  );
+}
+
+// Main page component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="form-container">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
