@@ -16,14 +16,8 @@ export default function ProductCard({ products }) {
     if (product.images && product.images.length > 0) {
       return product.images[0];
     }
-    // Fallback images based on category
-    const fallbacks = {
-      'Electronics': 'https://picsum.photos/id/0/400/400',
-      'Clothing': 'https://picsum.photos/id/2/400/400',
-      'Home & Living': 'https://picsum.photos/id/4/400/400',
-      'Books': 'https://picsum.photos/id/20/400/400'
-    };
-    return fallbacks[product.category_name] || 'https://picsum.photos/id/10/400/400';
+    // Cloudinary placeholder if no image
+    return 'https://placehold.co/400x400/1a1a1a/ffffff?text=No+Image';
   };
   
   if (products.length === 0) {

@@ -20,7 +20,10 @@ export default function AccountPage() {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        await fetchOrders(data.user.id);
+        // Load orders from localStorage (in real app, from API)
+        const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        const userOrders = savedOrders.filter(o => o.userId === data.user.id);
+        setOrders(userOrders.reverse());
       } else {
         router.push('/login');
       }
@@ -32,12 +35,6 @@ export default function AccountPage() {
     }
   };
 
-  const fetchOrders = async (userId) => {
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-    const userOrders = orders.filter(o => o.userId === userId);
-    setOrders(userOrders);
-  };
-
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -46,13 +43,7 @@ export default function AccountPage() {
     }).format(price);
   };
 
-  if (loading) {
-    return <div className="card">Loading...</div>;
-  }
-
-  if (!user) {
-    return null;
-  }
+  if (loading) return <div className="card">Loading...</div>;
 
   return (
     <div>
@@ -61,9 +52,9 @@ export default function AccountPage() {
       <div className="dashboard-grid">
         <div className="dashboard-card">
           <h3>Profile Information</h3>
-          <p><strong>Name:</strong> {user.name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Member since:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
+          <p><strong>Name:</strong> {user?.name}</p>
+          <p><strong>Email:</strong> {user?.email}</p>
+          <p><strong>Role:</strong> {user?.role}</p>
         </div>
         
         <div className="dashboard-card">
@@ -83,7 +74,7 @@ export default function AccountPage() {
           <p>No orders yet. <Link href="/products">Start shopping →</Link></p>
         ) : (
           <div className="table-container">
-            <table>
+            <table className="orders-table">
               <thead>
                 <tr>
                   <th>Order #</th>

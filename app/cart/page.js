@@ -58,15 +58,6 @@ export default function CartPage() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const clearCart = () => {
-    if (confirm('Clear your entire cart?')) {
-      const cartKey = user ? `cart_${user.id}` : 'cart_guest';
-      setCart([]);
-      localStorage.setItem(cartKey, '[]');
-      window.dispatchEvent(new Event('cartUpdated'));
-    }
-  };
-
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-NG', {
       style: 'currency',
@@ -80,9 +71,7 @@ export default function CartPage() {
   const tax = subtotal * 0.075;
   const total = subtotal + shipping + tax;
 
-  if (loading) {
-    return <div className="card">Loading cart...</div>;
-  }
+  if (loading) return <div className="card">Loading cart...</div>;
 
   if (cart.length === 0) {
     return (
@@ -102,16 +91,9 @@ export default function CartPage() {
     <div>
       <h1>Shopping Cart</h1>
       
-      {user && (
-        <div className="card" style={{ marginBottom: '20px', backgroundColor: '#0a2a0a' }}>
-          <p>✓ Your cart is saved to your account. <Link href="/account/orders" style={{ color: '#4CAF50' }}>View order history →</Link></p>
-        </div>
-      )}
-      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '30px' }}>
         {/* Cart Items */}
         <div className="card">
-          {/* Cart table content (same as before) */}
           <div className="table-container">
             <table style={{ width: '100%' }}>
               <thead>
@@ -126,7 +108,12 @@ export default function CartPage() {
               <tbody>
                 {cart.map(item => (
                   <tr key={item.id}>
-                    <td>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <img 
+                        src={item.image || '/placeholder.jpg'} 
+                        alt={item.name}
+                        style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px' }}
+                      />
                       <Link href={`/products/${item.slug}`} style={{ color: '#ffffff', textDecoration: 'none' }}>
                         {item.name}
                       </Link>
@@ -134,14 +121,16 @@ export default function CartPage() {
                     <td>{formatPrice(item.price)}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="btn-small" style={{ padding: '4px 8px' }}>-</button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="btn-small">-</button>
                         <span>{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="btn-small" style={{ padding: '4px 8px' }}>+</button>
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="btn-small">+</button>
                       </div>
                     </td>
                     <td>{formatPrice(item.price * item.quantity)}</td>
                     <td>
-                      <button onClick={() => removeItem(item.id)} className="btn-small" style={{ backgroundColor: '#ff4444', color: '#fff', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}>Remove</button>
+                      <button onClick={() => removeItem(item.id)} className="btn-small" style={{ backgroundColor: '#ff4444', color: '#fff', border: 'none', padding: '4px 12px', borderRadius: '4px' }}>
+                        Remove
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -150,7 +139,6 @@ export default function CartPage() {
           </div>
           
           <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between' }}>
-            <button onClick={clearCart} className="btn-secondary">Clear Cart</button>
             <Link href="/products" className="btn-secondary">Continue Shopping</Link>
           </div>
         </div>
