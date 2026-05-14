@@ -9,7 +9,7 @@ export async function GET(request) {
     const reference = searchParams.get('reference');
     
     if (!reference) {
-      return NextResponse.json({ error: 'No reference provided' }, { status: 400 });
+      return NextResponse.redirect(new URL('/payment/failed', process.env.NEXTAUTH_URL));
     }
     
     // Verify payment with Paystack
@@ -32,49 +32,13 @@ export async function GET(request) {
         [reference]
       );
       
-      // Return success page HTML or redirect
-      return new NextResponse(
-        `<!DOCTYPE html>
-        <html>
-          <head>
-            <title>Payment Successful</title>
-            <script>
-              window.location.href = '/payment/success?reference=${reference}';
-            </script>
-          </head>
-          <body>
-            Redirecting...
-          </body>
-        </html>`,
-        {
-          status: 200,
-          headers: { 'Content-Type': 'text/html' },
-        }
-      );
+      return NextResponse.redirect(new URL(`/payment/success?reference=${reference}`, process.env.NEXTAUTH_URL));
     } else {
-      // Return failure page HTML
-      return new NextResponse(
-        `<!DOCTYPE html>
-        <html>
-          <head>
-            <title>Payment Failed</title>
-            <script>
-              window.location.href = '/payment/failed?reference=${reference}';
-            </script>
-          </head>
-          <body>
-            Redirecting...
-          </body>
-        </html>`,
-        {
-          status: 200,
-          headers: { 'Content-Type': 'text/html' },
-        }
-      );
+      return NextResponse.redirect(new URL(`/payment/failed?reference=${reference}`, process.env.NEXTAUTH_URL));
     }
     
   } catch (error) {
     console.error('Payment verification error:', error);
-    return NextResponse.json({ error: 'Verification failed' }, { status: 500 });
+    return NextResponse.redirect(new URL('/payment/failed', process.env.NEXTAUTH_URL));
   }
 }

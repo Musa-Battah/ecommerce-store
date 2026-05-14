@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-export default function PaymentSuccess() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('reference');
   const [order, setOrder] = useState(null);
@@ -16,9 +17,13 @@ export default function PaymentSuccess() {
   }, [reference]);
 
   const fetchOrderDetails = async () => {
-    const res = await fetch(`/api/orders/${reference}`);
-    const data = await res.json();
-    setOrder(data);
+    try {
+      const res = await fetch(`/api/orders/${reference}`);
+      const data = await res.json();
+      setOrder(data);
+    } catch (err) {
+      console.error('Error fetching order:', err);
+    }
   };
 
   return (
@@ -28,12 +33,22 @@ export default function PaymentSuccess() {
       <p style={{ color: '#888', marginBottom: '10px' }}>
         Your order has been confirmed.
       </p>
-      <p style={{ color: '#888', marginBottom: '30px' }}>
-        Order Reference: <strong>{reference}</strong>
-      </p>
+      {reference && (
+        <p style={{ color: '#666', marginBottom: '30px', fontSize: '14px' }}>
+          Order Reference: <strong>{reference}</strong>
+        </p>
+      )}
       <Link href="/account/orders" className="btn-primary">
         View My Orders
       </Link>
     </div>
+  );
+}
+
+export default function PaymentSuccess() {
+  return (
+    <Suspense fallback={<div className="card">Loading...</div>}>
+      <SuccessContent />
+    </Suspense>
   );
 }
