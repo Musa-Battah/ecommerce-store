@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 export default function CheckoutPage() {
   const router = useRouter();
   const [cart, setCart] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -15,24 +16,34 @@ export default function CheckoutPage() {
     address: '',
     city: '',
     state: '',
-    postalCode: '',
-    paymentMethod: 'cash_on_delivery'
+    postalCode: ''
   });
 
   useEffect(() => {
-    const savedCart = JSON.parse(localStorage.getItem('cart') || '[]');
-    if (savedCart.length === 0) {
-      router.push('/cart');
-    }
-    setCart(savedCart);
-    setLoading(false);
-  }, [router]);
+    fetchUserAndCart();
+  }, []);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const fetchUserAndCart = async () => {
+    try {
+      const userRes = await fetch('/api/auth/me');
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData.user);
+        setFormData(prev => ({
+          ...prev,
+          fullName: userData.user.name,
+          email: userData.user.email
+        }));
+      }
+      
+      const cartKey = user ? `cart_${user.id}` : 'cart_guest';
+      const savedCart = JSON.parse(localStorage.getItem(cartKey) || '[]');
+      setCart(savedCart);
+    } catch (err) {
+      console.error('Error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatPrice = (price) => {
@@ -48,41 +59,71 @@ export default function CheckoutPage() {
   const tax = subtotal * 0.075;
   const total = subtotal + shipping + tax;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    
-    // Simulate order processing
-    setTimeout(() => {
-      // Generate order number
-      const orderNumber = 'ORD-' + Date.now();
-      
-      // Save order to localStorage (in real app, this would go to database)
-      const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-      orders.push({
-        orderNumber,
-        date: new Date().toISOString(),
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+const handlePayment = async () => {
+  setProcessing(true);
+  
+  try {
+    // Save order to database
+    const orderRes = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...formData,
         items: cart,
-        customer: formData,
         subtotal,
         shipping,
         tax,
         total,
-        status: 'pending'
-      });
-      localStorage.setItem('orders', JSON.stringify(orders));
-      
-      // Clear cart
-      localStorage.setItem('cart', '[]');
-      window.dispatchEvent(new Event('cartUpdated'));
-      
-      // Redirect to confirmation
-      router.push(`/checkout/confirmation?order=${orderNumber}`);
-    }, 1500);
-  };
+        userId: user?.id
+      })
+    });
+    
+    const order = await orderRes.json();
+    
+    // Initialize payment
+    const paymentRes = await fetch('/api/payment/initialize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: total,
+        email: formData.email,
+        orderId: order.id,
+        metadata: {
+          cart_items: cart,
+          customer: formData
+        }
+      })
+    });
+    
+    const payment = await paymentRes.json();
+    
+    if (payment.success) {
+      // Redirect to Paystack payment page
+      window.location.href = payment.authorization_url;
+    } else {
+      alert('Payment initialization failed: ' + payment.error);
+      setProcessing(false);
+    }
+  } catch (err) {
+    console.error('Error:', err);
+    alert('Failed to process payment');
+    setProcessing(false);
+  }
+};
 
-  if (loading) {
-    return <div className="card">Loading...</div>;
+
+  if (loading) return <div className="card">Loading...</div>;
+
+  if (cart.length === 0) {
+    router.push('/cart');
+    return null;
   }
 
   return (
@@ -91,7 +132,7 @@ export default function CheckoutPage() {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
         {/* Shipping Form */}
-        <form onSubmit={handleSubmit} className="card">
+        <form onSubmit={(e) => { e.preventDefault(); handlePayment(); }} className="card">
           <h2>Shipping Information</h2>
           
           <div className="form-group">
@@ -172,31 +213,10 @@ export default function CheckoutPage() {
             />
           </div>
           
-          <h2 style={{ marginTop: '20px' }}>Payment Method</h2>
-          
           <div className="form-group">
-            <label>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="cash_on_delivery"
-                checked={formData.paymentMethod === 'cash_on_delivery'}
-                onChange={handleChange}
-              />
-              {' '} Cash on Delivery
-            </label>
-          </div>
-          
-          <div className="form-group">
-            <label>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="bank_transfer"
-                checked={formData.paymentMethod === 'bank_transfer'}
-                onChange={handleChange}
-              />
-              {' '} Bank Transfer
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input type="checkbox" required />
+              I agree to the <a href="#">Terms and Conditions</a>
             </label>
           </div>
         </form>
@@ -207,7 +227,7 @@ export default function CheckoutPage() {
           
           <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '20px' }}>
             {cart.map(item => (
-              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
                 <div>
                   {item.name} × {item.quantity}
                 </div>
@@ -216,28 +236,37 @@ export default function CheckoutPage() {
             ))}
           </div>
           
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Shipping</span>
               <span>{shipping === 0 ? 'Free' : formatPrice(shipping)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222222' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #222' }}>
               <span>Tax (7.5% VAT)</span>
               <span>{formatPrice(tax)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', fontSize: '18px', fontWeight: 'bold' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', fontSize: '20px', fontWeight: 'bold' }}>
               <span>Total</span>
               <span>{formatPrice(total)}</span>
             </div>
           </div>
           
-          <button type="submit" onClick={handleSubmit} className="btn-primary" disabled={submitting} style={{ width: '100%' }}>
-            {submitting ? 'Processing...' : 'Place Order'}
+          <button 
+            onClick={handlePayment} 
+            className="btn-primary" 
+            disabled={processing}
+            style={{ width: '100%' }}
+          >
+            {processing ? 'Processing...' : `Pay ${formatPrice(total)} with Paystack`}
           </button>
+          
+          <p style={{ fontSize: '12px', textAlign: 'center', marginTop: '15px', color: '#888' }}>
+            🔒 Secure payment powered by Paystack
+          </p>
         </div>
       </div>
     </div>

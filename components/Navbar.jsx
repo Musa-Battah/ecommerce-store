@@ -111,6 +111,13 @@ export default function Navbar() {
                       }}>
                         📋 Manage Orders
                       </Link>
+
+                      <Link href="/admin/dashboard" className="dropdown-item" onClick={() => {
+                        setIsMenuOpen(false);
+                        setIsAdminDropdownOpen(false);
+                      }}>
+                        📊 Dashboard
+                      </Link>
                     </div>
                   )}
                 </div>
