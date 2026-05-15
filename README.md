@@ -6,6 +6,7 @@ A complete, full-stack e-commerce platform built with Next.js 16, PostgreSQL, an
 
 [View Live Demo](https://ecommerce-store-3kls.vercel.app/)
 
+
 ## ✨ Features
 
 ### Customer Features
