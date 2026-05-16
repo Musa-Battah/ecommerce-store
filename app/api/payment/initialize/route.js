@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
 export async function POST(request) {
   try {
@@ -29,6 +30,11 @@ export async function POST(request) {
       [reference, orderId]
     );
     
+    // IMPORTANT: Use the full production URL
+    const callbackUrl = `${BASE_URL}/api/payment/verify`;
+    
+    console.log('Initializing payment with callback:', callbackUrl);
+    
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
@@ -36,7 +42,7 @@ export async function POST(request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        amount: Math.round(amount * 100), // Convert to kobo and ensure integer
+        amount: Math.round(amount * 100),
         email: email,
         reference: reference,
         metadata: {
@@ -44,11 +50,13 @@ export async function POST(request) {
           user_id: decoded.userId,
           ...metadata
         },
-        callback_url: `${process.env.NEXTAUTH_URL}/api/payment/verify`,
+        callback_url: callbackUrl,
       }),
     });
     
     const data = await response.json();
+    
+    console.log('Paystack response:', data);
     
     if (data.status) {
       return NextResponse.json({
