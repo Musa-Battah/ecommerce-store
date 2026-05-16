@@ -2,7 +2,6 @@ import { query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
-const BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
 export async function GET(request) {
   try {
@@ -10,7 +9,7 @@ export async function GET(request) {
     const reference = searchParams.get('reference');
     
     if (!reference) {
-      return NextResponse.redirect(`${BASE_URL}/payment/failed`);
+      return NextResponse.redirect(new URL('/payment/failed', process.env.NEXTAUTH_URL));
     }
     
     // Verify payment with Paystack
@@ -23,24 +22,23 @@ export async function GET(request) {
     const data = await response.json();
     
     if (data.status && data.data.status === 'success') {
-      // Update order status
+      // Update order status if not already updated by webhook
       await query(
         `UPDATE orders 
          SET status = 'paid', 
              payment_status = 'completed',
              payment_date = NOW()
-         WHERE payment_reference = $1`,
+         WHERE payment_reference = $1 AND status != 'paid'`,
         [reference]
       );
       
-      // Redirect to success page
-      return NextResponse.redirect(`${BASE_URL}/payment/success?reference=${reference}`);
+      return NextResponse.redirect(new URL(`/payment/success?reference=${reference}`, process.env.NEXTAUTH_URL));
     } else {
-      return NextResponse.redirect(`${BASE_URL}/payment/failed?reference=${reference}`);
+      return NextResponse.redirect(new URL(`/payment/failed?reference=${reference}`, process.env.NEXTAUTH_URL));
     }
     
   } catch (error) {
     console.error('Payment verification error:', error);
-    return NextResponse.redirect(`${BASE_URL}/payment/failed`);
+    return NextResponse.redirect(new URL('/payment/failed', process.env.NEXTAUTH_URL));
   }
 }

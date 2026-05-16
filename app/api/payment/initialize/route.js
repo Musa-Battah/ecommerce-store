@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
-const BASE_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const REFERENCE_PREFIX = process.env.NEXT_PUBLIC_REFERENCE_PREFIX || 'ECOMM-';
 
 export async function POST(request) {
   try {
@@ -22,18 +22,14 @@ export async function POST(request) {
     
     const { amount, email, orderId, metadata } = await request.json();
     
-    const reference = `ORDER-${orderId}-${Date.now()}`;
+    // Generate unique reference with ECOMM- prefix for Pipedream routing
+    const reference = `${REFERENCE_PREFIX}${orderId}-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     
     // Save payment reference to order
     await query(
       'UPDATE orders SET payment_reference = $1 WHERE id = $2',
       [reference, orderId]
     );
-    
-    // IMPORTANT: Use the full production URL
-    const callbackUrl = `${BASE_URL}/api/payment/verify`;
-    
-    console.log('Initializing payment with callback:', callbackUrl);
     
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
@@ -50,13 +46,11 @@ export async function POST(request) {
           user_id: decoded.userId,
           ...metadata
         },
-        callback_url: callbackUrl,
+        callback_url: `${process.env.NEXTAUTH_URL}/api/payment/verify`,
       }),
     });
     
     const data = await response.json();
-    
-    console.log('Paystack response:', data);
     
     if (data.status) {
       return NextResponse.json({
